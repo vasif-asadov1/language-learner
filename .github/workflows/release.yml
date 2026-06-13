@@ -1,0 +1,52 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # This tells GitHub to ONLY run the build when you publish a new version (like v1.0.0)
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-20.04 # Uses an older Linux base for maximum glibc compatibility
+            executable_name: LanguageLearner-Linux
+            artifact_path: dist/LanguageLearner
+          - os: windows-latest # Automatically builds the Windows version
+            executable_name: LanguageLearner-Windows.exe
+            artifact_path: dist/LanguageLearner.exe
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install Dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller PyQt6 deep-translator requests fpdf2
+
+    - name: Build Application with PyInstaller
+      run: pyinstaller --onefile --windowed --name "LanguageLearner" main.py
+
+    - name: Rename Linux Binary
+      if: matrix.os == 'ubuntu-20.04'
+      run: mv ${{ matrix.artifact_path }} dist/${{ matrix.executable_name }}
+
+    - name: Rename Windows Binary
+      if: matrix.os == 'windows-latest'
+      run: Rename-Item -Path "${{ matrix.artifact_path }}" -NewName "${{ matrix.executable_name }}"
+
+    - name: Publish to GitHub Releases
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/${{ matrix.executable_name }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
