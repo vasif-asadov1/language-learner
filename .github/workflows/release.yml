@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-20.04 # Uses an older Linux base for maximum glibc compatibility
+          - os: ubuntu-22.04 # Uses an older Linux base for maximum glibc compatibility
             executable_name: LanguageLearner-Linux
             artifact_path: dist/LanguageLearner
           - os: windows-latest # Automatically builds the Windows version
@@ -37,7 +37,7 @@ jobs:
       run: pyinstaller --onefile --windowed --name "LanguageLearner" main.py
 
     - name: Rename Linux Binary
-      if: matrix.os == 'ubuntu-20.04'
+      if: matrix.os == 'ubuntu-22.04'
       run: mv ${{ matrix.artifact_path }} dist/${{ matrix.executable_name }}
 
     - name: Rename Windows Binary
