@@ -12,28 +12,29 @@ from deep_translator import GoogleTranslator
 import database
 import pdf_generator
 
-CONFIG_FILE = "config.json"
+# --- NEW: SYSTEM FOLDER HANDLING ---
+APP_DIR = os.path.expanduser("~/.LanguageLearnerPro")
+os.makedirs(APP_DIR, exist_ok=True)
+CONFIG_FILE = os.path.join(APP_DIR, "config.json")
 
 class LanguageLearnerUI(QMainWindow):
     def __init__(self):
         super().__init__()
         
-        # 1. Initialize the session database
         self.session_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.db_name = f"session_{self.session_time}.db"
+        # Lock the database to the hidden app folder
+        self.db_name = os.path.join(APP_DIR, f"session_{self.session_time}.db")
         database.init_db(self.db_name)
         
         self.is_dark_mode = False
         self.pdf_export_path = ""
         
-        # 2. Ensure we have a valid export path before doing anything else
         self.load_or_request_path()
         
         self.init_ui()
         self.apply_theme()
 
     def load_or_request_path(self):
-        """Loads the saved path or forces the user to pick one on first startup."""
         if os.path.exists(CONFIG_FILE):
             try:
                 with open(CONFIG_FILE, 'r') as f:
@@ -43,19 +44,16 @@ class LanguageLearnerUI(QMainWindow):
                         self.pdf_export_path = saved_path
                         return
             except Exception:
-                pass # If the file is corrupted, we just ask for the path again
+                pass 
 
-        # If no valid path exists, force the user to pick one
         self.change_export_path(is_startup=True)
 
     def change_export_path(self, is_startup=False):
-        """Opens a dialog to select the PDF export folder."""
         dialog_title = "Select Folder to Save PDFs" if not is_startup else "MANDATORY: Select a folder to save your PDF exports"
         folder = QFileDialog.getExistingDirectory(self, dialog_title)
         
         if folder:
             self.pdf_export_path = folder
-            # Save to config file
             with open(CONFIG_FILE, 'w') as f:
                 json.dump({"pdf_path": self.pdf_export_path}, f)
             
@@ -63,8 +61,7 @@ class LanguageLearnerUI(QMainWindow):
                 QMessageBox.information(self, "Path Updated", f"PDFs will now be saved to:\n{self.pdf_export_path}")
         else:
             if is_startup:
-                # If they cancel during startup, default to the app's current directory
-                default_dir = os.path.dirname(os.path.abspath(__file__))
+                default_dir = os.path.expanduser("~/Documents")
                 self.pdf_export_path = default_dir
                 QMessageBox.warning(self, "Default Path Set", f"No path selected. PDFs will default to:\n{default_dir}")
 
@@ -122,7 +119,6 @@ class LanguageLearnerUI(QMainWindow):
         
         button_layout = QHBoxLayout()
         
-        # UI/UX: Buttons will be styled in the apply_theme function
         btn_enter = QPushButton("ENTER")
         btn_enter.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_enter.clicked.connect(self.translate_text)
@@ -139,12 +135,10 @@ class LanguageLearnerUI(QMainWindow):
         btn_delete_last.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_delete_last.clicked.connect(self.delete_last)
         
-        # REPLACED SKIP WITH PATH
         btn_path = QPushButton("PATH")
         btn_path.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_path.clicked.connect(lambda: self.change_export_path(is_startup=False))
         
-        # CLEANED UP PDF BUTTON TEXT
         btn_pdf = QPushButton("PDF")
         btn_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_pdf.clicked.connect(self.generate_pdf)
@@ -167,7 +161,6 @@ class LanguageLearnerUI(QMainWindow):
         self.apply_theme()
 
     def apply_theme(self):
-        # UI/UX Upgrade: Sleek, compact, modern CSS
         if self.is_dark_mode:
             self.btn_theme.setText("☀️ Light Mode")
             self.setStyleSheet("""
@@ -285,7 +278,6 @@ class LanguageLearnerUI(QMainWindow):
         self.output_text.setText("Last entry deleted from database.")
 
     def generate_pdf(self):
-        # We now use the user's selected path!
         pdf_filename = f"session_{self.session_time}.pdf"
         full_path = os.path.join(self.pdf_export_path, pdf_filename)
         
@@ -303,17 +295,13 @@ class LanguageLearnerUI(QMainWindow):
                 return True 
         return super().eventFilter(source, event)
 
-    # ---------------------------------------------------------
-    # NEW AUTOMATIC CLEANUP FEATURE
-    # ---------------------------------------------------------
     def closeEvent(self, event):
-        """This triggers automatically right before the application window closes."""
         if os.path.exists(self.db_name):
             try:
                 os.remove(self.db_name)
-                print(f"Cleanup successful: Removed temporary session database ({self.db_name}).")
-            except Exception as e:
-                print(f"Cleanup failed: Could not delete database. {e}")
+                # Removed the print statement so it stays completely silent
+            except Exception:
+                pass
         event.accept()
 
 if __name__ == '__main__':
