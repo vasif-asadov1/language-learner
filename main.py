@@ -12,7 +12,7 @@ from deep_translator import GoogleTranslator
 import database
 import pdf_generator
 
-# --- NEW: SYSTEM FOLDER HANDLING ---
+# --- SYSTEM FOLDER HANDLING ---
 APP_DIR = os.path.expanduser("~/.LanguageLearnerPro")
 os.makedirs(APP_DIR, exist_ok=True)
 CONFIG_FILE = os.path.join(APP_DIR, "config.json")
@@ -22,7 +22,6 @@ class LanguageLearnerUI(QMainWindow):
         super().__init__()
         
         self.session_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        # Lock the database to the hidden app folder
         self.db_name = os.path.join(APP_DIR, f"session_{self.session_time}.db")
         database.init_db(self.db_name)
         
@@ -206,8 +205,10 @@ class LanguageLearnerUI(QMainWindow):
                 try:
                     response = requests.get(f"https://api.datamuse.com/words?sp={en_word}&md=p&max=1", timeout=2)
                     data = response.json()
-                    if data and 'tags' in data[0] and 'n' in data[0]['tags']:
-                        is_noun = True
+                    # CRITICAL FIX: Only check the FIRST tag (the primary usage of the English word)
+                    if data and 'tags' in data[0] and len(data[0]['tags']) > 0:
+                        if data[0]['tags'][0] == 'n':
+                            is_noun = True
                 except:
                     pass
                 
@@ -290,7 +291,6 @@ class LanguageLearnerUI(QMainWindow):
                 self.output_text.setText("⚠️ Cannot generate PDF. The session history is empty.")
                 
         except Exception as e:
-            # If ANYTHING fails, keep the app open and show the error!
             QMessageBox.critical(self, "PDF Export Error", f"Failed to generate PDF.\n{str(e)}")
 
     def eventFilter(self, source, event):
@@ -304,7 +304,6 @@ class LanguageLearnerUI(QMainWindow):
         if os.path.exists(self.db_name):
             try:
                 os.remove(self.db_name)
-                # Removed the print statement so it stays completely silent
             except Exception:
                 pass
         event.accept()
