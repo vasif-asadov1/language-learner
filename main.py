@@ -280,7 +280,10 @@ class LanguageLearnerUI(QMainWindow):
 
     def generate_pdf(self):
         try:
-            pdf_filename = f"session_{self.session_time}.pdf"
+            # Grab the exact time the button is clicked in YYYY_MM_DD_HH_MM format
+            export_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
+            pdf_filename = f"{export_time}.pdf"
+            
             full_path = os.path.join(self.pdf_export_path, pdf_filename)
             
             success = pdf_generator.create_pdf(self.db_name, full_path)
