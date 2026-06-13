@@ -278,15 +278,20 @@ class LanguageLearnerUI(QMainWindow):
         self.output_text.setText("Last entry deleted from database.")
 
     def generate_pdf(self):
-        pdf_filename = f"session_{self.session_time}.pdf"
-        full_path = os.path.join(self.pdf_export_path, pdf_filename)
-        
-        success = pdf_generator.create_pdf(self.db_name, full_path)
-        
-        if success:
-            self.output_text.setText(f"✓ PDF generated successfully!\n\nSaved safely in:\n{full_path}")
-        else:
-            self.output_text.setText("⚠️ Cannot generate PDF. The session history is empty.")
+        try:
+            pdf_filename = f"session_{self.session_time}.pdf"
+            full_path = os.path.join(self.pdf_export_path, pdf_filename)
+            
+            success = pdf_generator.create_pdf(self.db_name, full_path)
+            
+            if success:
+                self.output_text.setText(f"✓ PDF generated successfully!\n\nSaved safely in:\n{full_path}")
+            else:
+                self.output_text.setText("⚠️ Cannot generate PDF. The session history is empty.")
+                
+        except Exception as e:
+            # If ANYTHING fails, keep the app open and show the error!
+            QMessageBox.critical(self, "PDF Export Error", f"Failed to generate PDF.\n{str(e)}")
 
     def eventFilter(self, source, event):
         if source is self.input_text and event.type() == QEvent.Type.KeyPress:

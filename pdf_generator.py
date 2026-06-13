@@ -1,22 +1,21 @@
 import os
-import urllib.request
+import requests
 from fpdf import FPDF
 import database
 
-# 1. Create a hidden background folder for app data
 APP_DIR = os.path.expanduser("~/.LanguageLearnerPro")
 os.makedirs(APP_DIR, exist_ok=True)
 
-# 2. Lock the font to the hidden folder
 FONT_URL = "https://raw.githubusercontent.com/matplotlib/matplotlib/main/lib/matplotlib/mpl-data/fonts/ttf/DejaVuSans.ttf"
 FONT_PATH = os.path.join(APP_DIR, "DejaVuSans.ttf")
 
 def download_font():
-    """Downloads a free font file if it isn't already in the folder."""
+    """Downloads a free font file safely using requests."""
     if not os.path.exists(FONT_PATH):
-        req = urllib.request.Request(FONT_URL, headers={'User-Agent': 'Mozilla/5.0'})
-        with urllib.request.urlopen(req) as response, open(FONT_PATH, 'wb') as out_file:
-            out_file.write(response.read())
+        response = requests.get(FONT_URL, timeout=15)
+        response.raise_for_status() # This raises an error if the download fails
+        with open(FONT_PATH, 'wb') as out_file:
+            out_file.write(response.content)
 
 def create_pdf(db_name, filename="learning_materials.pdf"):
     download_font()
@@ -24,7 +23,8 @@ def create_pdf(db_name, filename="learning_materials.pdf"):
     pdf = FPDF()
     pdf.add_page()
     
-    pdf.add_font("DejaVu", "", FONT_PATH)
+    # Using fname explicitly for fpdf2 compatibility
+    pdf.add_font("DejaVu", "", fname=FONT_PATH)
     
     pdf.set_font("DejaVu", size=16)
     pdf.cell(w=pdf.epw, h=10, text="My Language Learning Notes", new_x="LMARGIN", new_y="NEXT", align="C")
