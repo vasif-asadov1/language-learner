@@ -1,1 +1,16 @@
+# Python environments
 .venv/
+__pycache__/
+
+# PyInstaller build folders
+build/
+dist/
+*.spec
+
+# Application Data
+*.db
+config.json
+PDF_Exports/
+
+# OS generated files
+.DS_Store
