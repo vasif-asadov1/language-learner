@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QTextEdit, QPushButton, QComboBox, QCheckBox,
                              QLabel, QMessageBox, QFileDialog, QDialog, QRadioButton, QListView)
 from PyQt6.QtCore import Qt, QEvent, QThread, pyqtSignal
-from PyQt6.QtGui import QFont, QShortcut, QKeySequence
+from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QIcon
 from deep_translator import GoogleTranslator
 import database
 import pdf_generator
@@ -204,6 +204,7 @@ class LanguageLearnerUI(QMainWindow):
 
     def init_ui(self):
         self.setWindowTitle(f"Language Learner Pro - {self.current_version}")
+        self.setWindowIcon(QIcon("images/icon.png"))
         self.resize(1000, 600)
         
         central_widget = QWidget()

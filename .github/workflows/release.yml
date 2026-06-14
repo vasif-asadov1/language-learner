@@ -34,7 +34,7 @@ jobs:
         pip install pyinstaller PyQt6 deep-translator requests fpdf2 arabic-reshaper python-bidi
 
     - name: Build Application with PyInstaller
-      run: pyinstaller --onefile --windowed --hidden-import="bidi.algorithm" --name "LanguageLearner" main.py
+      run: pyinstaller --onefile --windowed --icon="images/icon.ico" --hidden-import="bidi.algorithm" --name "LanguageLearner" main.py
 
     - name: Rename Linux Binary
       if: matrix.os == 'ubuntu-22.04'
