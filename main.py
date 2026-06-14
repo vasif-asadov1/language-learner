@@ -83,7 +83,7 @@ class LanguageLearnerUI(QMainWindow):
         super().__init__()
         
         # --- APP VERSION ---
-        self.current_version = "v1.0.6" 
+        self.current_version = "v1.1.0" 
         
         self.session_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.db_name = os.path.join(APP_DIR, f"session_{self.session_time}.db")
