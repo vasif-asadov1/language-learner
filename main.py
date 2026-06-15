@@ -210,8 +210,17 @@ class LanguageLearnerUI(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        
-        top_bar = QHBoxLayout()
+
+        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setSpacing(12)
+                
+        top_bar_container = QWidget()
+        top_bar_container.setObjectName("topBarCard")
+
+        top_bar = QHBoxLayout(top_bar_container)
+
+        top_bar.setContentsMargins(14, 10, 14, 10)
+        top_bar.setSpacing(12)
 
         # --- UNIFIED LANGUAGE MAP ---
         self.lang_map = {
@@ -229,11 +238,19 @@ class LanguageLearnerUI(QMainWindow):
         }
         
         self.source_lang_combo = QComboBox()
+        self.source_lang_combo.setMaxVisibleItems(6)
         self.source_lang_combo.setView(QListView())
+        self.source_lang_combo.view().setVerticalScrollMode(
+            QListView.ScrollMode.ScrollPerPixel
+        )
         self.source_lang_combo.addItem("🔍 Auto Detect")
         self.source_lang_combo.addItems(self.lang_map.keys())
         
         self.target_lang_combo = QComboBox()
+        self.target_lang_combo.setMaxVisibleItems(6)
+        self.target_lang_combo.view().setVerticalScrollMode(
+            QListView.ScrollMode.ScrollPerPixel
+        )
         self.target_lang_combo.setView(QListView())
         self.target_lang_combo.addItems(self.lang_map.keys())
         self.target_lang_combo.setCurrentText("🇩🇪 German")
@@ -258,6 +275,7 @@ class LanguageLearnerUI(QMainWindow):
         top_bar.addWidget(QLabel("Font:"))
         
         self.font_size_combo = QComboBox()
+        self.font_size_combo.setObjectName("fontSelector")
         # self.font_size_combo.setView(QListView())
         self.font_size_combo.addItems([f"{i}pt" for i in range(10, 30)]) # Generates 10pt to 29pt
         self.font_size_combo.setCurrentText("14pt") # Set standard default
@@ -281,9 +299,10 @@ class LanguageLearnerUI(QMainWindow):
         self.btn_theme.clicked.connect(self.toggle_theme)
         top_bar.addWidget(self.btn_theme)
         
-        main_layout.addLayout(top_bar)
+        main_layout.addWidget(top_bar_container)
         
         text_layout = QHBoxLayout()
+        text_layout.setSpacing(10)
         
         self.input_text = QTextEdit()
         self.input_text.setFont(QFont("Arial", 14))
@@ -298,7 +317,13 @@ class LanguageLearnerUI(QMainWindow):
         text_layout.addWidget(self.output_text)
         main_layout.addLayout(text_layout)
         
-        button_layout = QHBoxLayout()
+        action_bar = QWidget()
+        action_bar.setObjectName("actionBar")
+
+        button_layout = QHBoxLayout(action_bar)
+
+        button_layout.setContentsMargins(12, 10, 12, 10)
+        button_layout.setSpacing(8)
         
         btn_enter = QPushButton("ENTER")
         btn_enter.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -325,6 +350,7 @@ class LanguageLearnerUI(QMainWindow):
         btn_layout.clicked.connect(self.open_layout_dialog)
         
         btn_pdf = QPushButton("PDF")
+        btn_pdf.setObjectName("pdfButton")
         btn_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_pdf.clicked.connect(self.generate_pdf)
         
@@ -337,7 +363,7 @@ class LanguageLearnerUI(QMainWindow):
         button_layout.addStretch()
         button_layout.addWidget(btn_pdf)
         
-        main_layout.addLayout(button_layout)
+        main_layout.addWidget(action_bar)
 
         self.shortcut_pdf = QShortcut(QKeySequence("Ctrl+Shift+E"), self)
         self.shortcut_pdf.activated.connect(self.generate_pdf)
@@ -401,38 +427,64 @@ class LanguageLearnerUI(QMainWindow):
             self.setStyleSheet(scrollbar_style + """
                 /* MAIN WINDOW & TEXT AREAS */
                 QMainWindow, QWidget { 
-                    background-color: #0F172A; /* Deep Slate */
+                    background-color: #071224;
                     color: #F8FAFC; 
                     font-family: 'Inter', 'Segoe UI', sans-serif;
                 }
-                QTextEdit { 
-                    background-color: #1E293B; 
-                    color: #F1F5F9; 
-                    border: 1px solid #334155; 
-                    border-radius: 12px; 
-                    padding: 16px; 
-                    line-height: 1.6;
+
+                QTextEdit {
+
+                    background-color: #16284A;
+
+                    color: #D9E6FF;
+
+                    border: 1px solid #2E4772;
+
+                    border-radius: 22px;
+
+                    padding: 24px;
+
+                    line-height: 1.8;
                 }
+
                 QTextEdit:focus {
-                    border: 1px solid #6366F1; /* Indigo focus ring */
+
+                    border: 2px solid #6C72E8;
+                }                              
+
+
+                               
+                QTextEdit[placeholderText] {
+                    color: #A7A093;
                 }
 
                 /* PRIMARY BUTTONS (Gradients) */
-                QPushButton { 
-                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4F46E5, stop:1 #6366F1); 
-                    color: white; 
-                    border: none; 
-                    border-radius: 8px; 
-                    padding: 10px 18px; 
-                    font-weight: bold; 
-                    font-size: 13px; 
+                                            
+                QPushButton {
+
+                    background-color: #424DA8;
+
+                    color: #EAF0FF;
+
+                    border: none;
+
+                    border-radius: 10px;
+
+                    padding: 8px 14px;
+
+                    font-weight: 600;
                 }
-                QPushButton:hover { 
-                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4338CA, stop:1 #4F46E5); 
+
+                QPushButton:hover {
+
+                    background-color: #4D59BB;
                 }
-                QPushButton:pressed { 
-                    background-color: #3730A3; 
+
+                QPushButton:pressed {
+
+                    background-color: #37418F;
                 }
+                               
                 
                 /* SECONDARY BUTTONS (Top Bar) */
                 QPushButton#btn_theme, QPushButton#btn_update { 
@@ -496,10 +548,97 @@ class LanguageLearnerUI(QMainWindow):
                     background-color: #6366F1; 
                     border: 4px solid #0F172A; 
                 }
-                QLabel { 
-                    font-weight: bold; 
-                    color: #94A3B8; 
+
+                QLabel {
+
+                    font-weight: 600;
+
+                    color: #B7C3D9;
+
+                    background-color: #13213C;
+
+                    border-radius: 8px;
+
+                    padding: 6px 10px;
+                }                              
+
+
+
+
+
+                                            
+                QWidget#topBarCard {
+
+                    background-color: #0F1C34;
+
+                    border: 1px solid #233654;
+
+                    border-radius: 18px;
                 }
+
+                QWidget#actionBar {
+
+                    background-color: #0F1C34;
+
+                    border: 1px solid #233654;
+
+                    border-radius: 18px;
+                }
+
+
+                QCheckBox {
+
+                    background-color: #1D2B48;
+
+                    border: 1px solid #304464;
+
+                    border-radius: 12px;
+
+                    padding: 10px 14px;
+
+                    color: #F8FAFC;
+
+                    font-weight: 600;
+
+                    spacing: 8px;
+                }
+
+                QCheckBox::indicator {
+
+                    width: 18px;
+                    height: 18px;
+
+                    border-radius: 5px;
+
+                    border: 1px solid #4A5D84;
+
+                    background-color: #16243F;
+                }
+
+                QCheckBox::indicator:checked {
+
+                    background-color: #5B5CE2;
+
+                    border: 1px solid #5B5CE2;
+                }   
+
+                QPushButton#pdfButton {
+
+                    background-color: #1D6A52;
+
+                    color: #E8FFF6;
+
+                    border: none;
+
+                    border-radius: 10px;
+
+                    padding: 8px 18px;
+                }
+
+
+
+
+
             """)
 
         else:
@@ -507,37 +646,106 @@ class LanguageLearnerUI(QMainWindow):
             self.setStyleSheet(scrollbar_style + """
                 /* MAIN WINDOW & TEXT AREAS */
                 QMainWindow, QWidget { 
-                    background-color: #F8FAFC; /* Clean Off-White */
+                    background-color: #F5F3EE;
                     color: #0F172A; 
                     font-family: 'Inter', 'Segoe UI', sans-serif;
                 }
-                QTextEdit { 
-                    background-color: #FFFFFF; 
-                    color: #1E293B; 
-                    border: 1px solid #E2E8F0; 
-                    border-radius: 12px; 
-                    padding: 16px; 
-                    line-height: 1.6;
+                                                            
+                QTextEdit {
+
+                    background-color: #FEFDFC;
+
+                    color: #2B2A28;
+
+                    border: 1px solid #E4DFD4;
+
+                    border-radius: 22px;
+
+                    padding: 24px;
+
+                    line-height: 1.8;
                 }
-                QTextEdit:focus { 
-                    border: 1px solid #6366F1; 
+
+                QTextEdit:focus {
+
+                    border: 2px solid #8E97D6;
+                }
+                                            
+                QWidget#topBarCard {
+
+                    background-color: #FBF9F4;
+
+                    border: 1px solid #DCD7CA;
+
+                    border-radius: 18px;
+                }
+
+                QWidget#actionBar {
+                    background-color: #F8F5EE;
+
+                    border: 1px solid #D8D2C6;
+
+                    border-radius: 18px;
+                }
+                               
+                QComboBox#fontSelector {
+
+                    background-color: #F5F4EF;
+
+                    border: 1px solid #D9D4C8;
                 }
 
                 /* PRIMARY BUTTONS (Gradients) */
-                QPushButton { 
-                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4F46E5, stop:1 #6366F1);
-                    color: white; 
-                    border: none; 
-                    border-radius: 8px; 
-                    padding: 10px 18px; 
-                    font-weight: bold; 
+                QPushButton {
+
+                    background-color: #737DB9;
+
+                    color: white;
+
+                    border: none;
+
+                    border-radius: 12px;
+
+                    padding: 10px 16px;
+
+                    font-weight: bold;
+
                     font-size: 13px;
+
+                    min-height: 22px;
                 }
-                QPushButton:hover { 
-                    background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1, stop:0 #4338CA, stop:1 #4F46E5); 
+
+                QPushButton:hover {
+
+                    background-color: #6772B0;
                 }
-                QPushButton:pressed { 
-                    background-color: #3730A3; 
+
+                QPushButton:pressed {
+
+                    background-color: #5A66A6;
+                }
+
+                QPushButton#pdfButton {
+
+                    background-color: #BFD8C4;
+
+                    color: #234234;
+
+                    font-weight: bold;
+
+                    border-radius: 10px;
+
+                    padding: 11px 24px;
+                }
+
+                QPushButton#pdfButton:hover {
+
+                    background-color: #AED0B5;
+                }
+
+                QPushButton#pdfButton:pressed {
+
+                    background-color: #98C5A1;
                 }
                 
                 /* SECONDARY BUTTONS (Top Bar) */
@@ -551,37 +759,102 @@ class LanguageLearnerUI(QMainWindow):
                 }
                 
                 /* COMBO BOX (Dropdown Button) */
-                QComboBox { 
-                    background-color: #FFFFFF; 
-                    color: #0F172A; 
-                    border: 1px solid #CBD5E1; 
-                    border-radius: 8px; 
-                    padding: 8px 12px; 
+
+                QComboBox {
+
+                    background-color: #E9EEE4;
+
+                    color: #2F2A24;
+
+                    border: 1px solid #CBD3C1;
+
+                    border-radius: 12px;
+
+                    padding: 10px 14px;
+
                     font-weight: bold;
+
+                    min-height: 22px;
                 }
-                QComboBox::drop-down { 
-                    border: none; 
+
+                QComboBox:hover {
+
+                    background-color: #EEF2EA;
                 }
-                
-                /* COMBO BOX POPUP LIST (QListView Override for KDE) */
-                QComboBox QListView {
+
+                QComboBox::drop-down {
+
+                    border: none;
+
+                    width: 26px;
+                }
+ 
+
+                QAbstractItemView {
+
+                    background-color: #F8F5EE;
+
+                    color: #2F2A24;
+
+                    border: 1px solid #D7D1C5;
+
+                    border-radius: 12px;
+
+                    outline: none;
+
+                    padding: 8px;
+                }
+                                            
+                QAbstractItemView::item {
+
+                    min-height: 38px;
+
+                    padding: 6px 10px;
+
+                    border-radius: 8px;
+                }
+
+                QAbstractItemView::item:selected {
+
+                    background-color: #7E88C7;
+
+                    color: white;
+                }
+
+                QCheckBox {
+
+                    color: #2F2A24;
+
+                    font-weight: 600;
+
+                    background-color: #F3F0E8;
+
+                    border-radius: 8px;
+
+                    padding: 6px 12px;
+
+                    spacing: 8px;
+                }
+
+                QCheckBox::indicator {
+
+                    width: 18px;
+                    height: 18px;
+
+                    border-radius: 5px;
+
+                    border: 1px solid #CFC8BB;
+
                     background-color: #FFFFFF;
-                    color: #0F172A;
-                    border: 1px solid #CBD5E1;
-                    border-radius: 6px;
-                    outline: none; /* Removes dotted focus line */
-                    padding: 4px;
                 }
-                QComboBox QListView::item {
-                    min-height: 32px;
-                    padding: 4px 8px;
-                    border-radius: 4px; /* Rounds the hover highlight */
+
+                QCheckBox::indicator:checked {
+
+                    background-color: #737DB9;
+
+                    border: 1px solid #737DB9;
                 }
-                QComboBox QListView::item:selected, QComboBox QListView::item:hover {
-                    background-color: #6366F1;
-                    color: #FFFFFF;
-                }
-                
+                               
                 /* POPUP DIALOGS & RADIO BUTTONS */
                 QDialog { 
                     background-color: #F8FAFC; 
@@ -602,9 +875,18 @@ class LanguageLearnerUI(QMainWindow):
                     background-color: #6366F1; 
                     border: 4px solid #FFFFFF; 
                 }
-                QLabel { 
-                    font-weight: bold; 
-                    color: #64748B; 
+
+                QLabel {
+
+                    font-weight: 600;
+
+                    color: #665D52;
+
+                    background-color: #F3F0E8;
+
+                    border-radius: 8px;
+
+                    padding: 6px 10px;
                 }
             """)
 

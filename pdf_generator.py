@@ -50,21 +50,49 @@ def create_pdf(db_name, filename="learning_materials.pdf", layout="1_column"):
     download_fonts()
     
     pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
-    
+
+
     # Load BOTH fonts into the PDF engine
     pdf.add_font("DejaVu", "", fname=DEJAVU_PATH)
     pdf.add_font("Amiri", "", fname=AMIRI_PATH)
-    
-    # --- HEADING & DATE (Always DejaVu for English headers) ---
+        
+    # --- PREMIUM HEADER ---
+
+    pdf.set_fill_color(42, 57, 95)
+    pdf.rect(10, 10, 190, 18, "F")
+
     pdf.set_font("DejaVu", size=20)
-    pdf.cell(w=pdf.epw, h=10, text="Language Learning Notes", new_x="LMARGIN", new_y="NEXT", align="C")
-    
-    pdf.set_font("DejaVu", size=12)
-    current_date = datetime.now().strftime("%Y-%m-%d") 
-    pdf.cell(w=pdf.epw, h=8, text=current_date, new_x="LMARGIN", new_y="NEXT", align="C")
-    
-    pdf.ln(10) 
+    pdf.set_text_color(255, 255, 255)
+
+    pdf.set_xy(10, 13)
+    pdf.cell(
+        w=190,
+        h=8,
+        text="Language Learning Notes",
+        align="C"
+    )
+
+    pdf.set_y(35)
+
+    pdf.set_font("DejaVu", size=11)
+    pdf.set_text_color(120, 120, 120)
+
+    current_date = datetime.now().strftime("%d %B %Y")
+
+    pdf.cell(
+        w=pdf.epw,
+        h=8,
+        text=f"Generated on {current_date}",
+        new_x="LMARGIN",
+        new_y="NEXT",
+        align="C"
+    )
+
+    pdf.ln(8)
+
+
     
     translations = database.get_all_translations(db_name)
     
@@ -75,7 +103,30 @@ def create_pdf(db_name, filename="learning_materials.pdf", layout="1_column"):
     if layout == "2_column":
         half_w = (pdf.epw / 2) - 5
         mid_x = pdf.l_margin + half_w + 5
-        
+
+        pdf.set_font("DejaVu", size=11)
+
+        pdf.set_text_color(90, 90, 90)
+
+        pdf.cell(
+            half_w,
+            8,
+            "Original",
+            align="L"
+        )
+
+        pdf.cell(
+            half_w,
+            8,
+            "Translation",
+            align="L"
+        )
+
+        pdf.ln(10)
+
+
+
+
         for index, (original, translated) in enumerate(translations, start=1):
             if pdf.get_y() > 210:
                 pdf.add_page()
@@ -85,7 +136,7 @@ def create_pdf(db_name, filename="learning_materials.pdf", layout="1_column"):
             # Left Column (Original Text)
             orig_text, orig_align, orig_font = process_text(f"{index}. {original}")
             pdf.set_font(orig_font, size=12) # Dynamically set the exact font needed
-            pdf.set_text_color(0, 0, 150)
+            pdf.set_text_color(59, 86, 164)
             pdf.set_xy(pdf.l_margin, start_y)
             pdf.multi_cell(w=half_w, h=8, text=orig_text, align=orig_align)
             end_y_left = pdf.get_y()
@@ -93,7 +144,7 @@ def create_pdf(db_name, filename="learning_materials.pdf", layout="1_column"):
             # Right Column (Translated Text)
             trans_text, trans_align, trans_font = process_text(translated)
             pdf.set_font(trans_font, size=12) # Dynamically set the exact font needed
-            pdf.set_text_color(0, 100, 0)
+            pdf.set_text_color(31, 111, 81)
             pdf.set_xy(mid_x, start_y)
             pdf.multi_cell(w=half_w, h=8, text=trans_text, align=trans_align)
             end_y_right = pdf.get_y()
@@ -101,10 +152,10 @@ def create_pdf(db_name, filename="learning_materials.pdf", layout="1_column"):
             max_y = max(end_y_left, end_y_right)
             
             # Draw the thin separator line down the middle
-            pdf.set_draw_color(200, 200, 200)
+            pdf.set_draw_color(225, 225, 225)
             pdf.line(mid_x - 2.5, start_y, mid_x - 2.5, max_y)
             
-            pdf.set_y(max_y + 8)
+            pdf.set_y(max_y + 10)
             
     # --- STANDARD 1 COLUMN LAYOUT ---
     else:
@@ -113,13 +164,13 @@ def create_pdf(db_name, filename="learning_materials.pdf", layout="1_column"):
             # Original Text
             orig_text, orig_align, orig_font = process_text(f"{index}. {original}")
             pdf.set_font(orig_font, size=12)
-            pdf.set_text_color(0, 0, 150)
+            pdf.set_text_color(59, 86, 164)
             pdf.multi_cell(w=pdf.epw, h=8, text=orig_text, align=orig_align, new_x="LMARGIN", new_y="NEXT")
             
             # Translated Text
             trans_text, trans_align, trans_font = process_text(translated)
             pdf.set_font(trans_font, size=12)
-            pdf.set_text_color(0, 100, 0)
+            pdf.set_text_color(31, 111, 81)
             pdf.multi_cell(w=pdf.epw, h=8, text=trans_text, align=trans_align, new_x="LMARGIN", new_y="NEXT")
             
             pdf.ln(5) 
