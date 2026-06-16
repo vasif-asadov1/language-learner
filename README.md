@@ -13,24 +13,21 @@
 
 1. **The "Google Translate" Problem (Automated Note-Taking):** 
 While standard web translators allow limitless translations, they force a highly manual workflow: translating a word, copying it, switching to a separate note-taking app, formatting the text, and manually saving it. **Language Learner** eliminates this friction. You simply type and translate. With one click, your entire session is compiled into a cleanly formatted, timestamped PDF (e.g., `2026_06_13_22_11.pdf`), allowing you to effortlessly track your learning progress over time.
+
 2. **The "Paid App" Problem (100% Free & Unlimited):**
-Many automated vocabulary and language learning tools lock core features behind paywalls or impose strict daily translation limits. This application is completely open-source. It does not want your money, and there are absolutely zero limits on your translations or PDF generations. (If this tool helps your language journey, please consider giving the repository a star ⭐ and leaving a comment to support future improvements!)
+Many automated vocabulary and language learning tools lock core features behind paywalls or impose strict daily translation limits. This application is completely free to run. It does not want your money, and there are absolutely zero limits on your translations or PDF generations. (If this tool helps your language journey, please consider giving the repository a star ⭐ and leaving a comment to support future improvements!)
 
 # 🌐 Supported Languages
 
 Currently, the application supports Universal Input (you can type in any language using Auto-Detect) and outputs precise translations and synonyms into the following target languages:
 
 🇩🇪 German
-
 🇬🇧 English
-
 🇪🇸 Spanish
-
 🇫🇷 French
-
 🇮🇹 Italian
 
-(More target languages are actively planned for future releases).
+*(More target languages are actively planned for future releases).*
 
 # Keyboard Shortcuts
 
@@ -71,20 +68,18 @@ This project utilizes a fully automated CI/CD pipeline via GitHub Actions to com
 2. Download `LanguageLearner-Linux`.
 3. Open your terminal, navigate to the download folder, and make it executable:
 
-   ```bash
+```bash
    chmod +x LanguageLearner-Linux
-   ```
+```
+4. Run the application:
 
-1. Run the application:
-    ```bash
-    ./LanguageLearner-Linux &
-    ```
-
+```bash
+   ./LanguageLearner-Linux
+```
 
 *(Alternatively, just double-click the file in your file manager).*
 
 ## For Windows Users
-
 1. Go to the [Releases page](https://github.com/vasif-asadov1/language-learner/releases).
 2. Download `LanguageLearner-Windows.exe`.
 3. Double-click the `.exe` file to launch the application instantly.
@@ -94,36 +89,36 @@ This project utilizes a fully automated CI/CD pipeline via GitHub Actions to com
 If you wish to run the Python script locally or compile it yourself:
 
 1. Clone the repository:
-
-    ```bash
+```bash
     git clone [https://github.com/vasif-asadov1/language-learner.git](https://github.com/vasif-asadov1/language-learner.git)
     cd language-learner
     ```
 
 2. Create a virtual environment and install dependencies:
-
-    ```bash
+```bash
     python -m venv .venv
     source .venv/bin/activate  # Linux/Mac
     # .venv\Scripts\activate   # Windows
     pip install pyinstaller PyQt6 deep-translator requests fpdf2
     ```
 
-
 3. Run the application:
-    ```bash
+```bash
     python main.py
     ```
 
-
 4. Compile the standalone executable:
-    ```bash
+```bash
     pyinstaller --onefile --windowed --name "LanguageLearner" main.py
     ```
 
+# 🔒 License & Copyright
 
+**Copyright © 2026 Vasif Asadov. All rights reserved.**
 
-# 📄 License
+This application is proprietary software. It is provided strictly as **Freeware** for personal, educational, and non-commercial language learning purposes. 
 
-This project is open-source and available under the MIT License. Feel free to fork, modify, and improve!
+* **Usage:** Anyone is free to download, run, and use the compiled application binaries (`LanguageLearner-Linux` and `LanguageLearner-Windows.exe`) completely free of charge.
+* **Restrictions:** Unauthorized copying, cloning, modification, redistribution, sublicensing, or creating public forks of this source code repository for any purpose is **strictly prohibited** without prior written permission from the copyright holder. 
 
+By downloading or accessing this software, you agree to use it as an end-user only.
