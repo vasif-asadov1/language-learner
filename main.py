@@ -3,6 +3,7 @@ import os
 import json
 import requests
 import webbrowser
+import re
 from gtts import gTTS
 import pygame
 import tempfile
@@ -11,7 +12,7 @@ from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QHBoxLayout, QTextEdit, QPushButton, QComboBox, QCheckBox,
                              QLabel, QMessageBox, QFileDialog, QDialog, QRadioButton, QListView, QScrollArea)
 from PyQt6.QtCore import Qt, QEvent, QThread, pyqtSignal
-from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QIcon
+from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QIcon, QColor, QTextCharFormat
 from deep_translator import GoogleTranslator
 import database
 import pdf_generator
@@ -35,13 +36,30 @@ class TranslationWorker(QThread):
         self.target_lang_name = target_lang_name
         self.needs_translit = needs_translit
 
+
     def run(self):
         # All the heavy internet requests happen here in the background!
         try:
             translator = GoogleTranslator(source=self.source_code, target=self.target_code)
-            final_output = translator.translate(self.text)
             
-            # Phonetic Transliteration
+            # --- 1. BULLETPROOF NEWLINE PRESERVATION ---
+            # Split by ANY sequence of newlines (\n, \n\n, \n\n\n)
+            # This guarantees exact vertical visual symmetry.
+            chunks = re.split(r'(\n+)', self.text)
+            translated_chunks = []
+            
+            for chunk in chunks:
+                if not chunk.strip():
+                    # If it's just newlines or spaces, keep it exactly as is!
+                    translated_chunks.append(chunk)
+                else:
+                    # Translate the actual text chunk
+                    translated_chunks.append(translator.translate(chunk.strip()))
+            
+            # Re-join everything exactly as it was formatted
+            final_output = ''.join(translated_chunks)
+            
+            # --- 2. PHONETIC TRANSLITERATION ---
             if self.needs_translit and self.target_lang_name in ["🇷🇺 Russian", "🇪🇬 Arabic (Egyptian)", "🇮🇷 Persian"]:
                 try:
                     url = "https://translate.googleapis.com/translate_a/single"
@@ -58,7 +76,7 @@ class TranslationWorker(QThread):
                 except Exception:
                     pass 
             
-            # Noun Article Check (RESTRICTED TO GERMAN)
+            # --- 3. NOUN ARTICLE CHECK (GERMAN ONLY) ---
             if len(self.text.split()) == 1 and self.target_lang_name == "🇩🇪 German":
                 en_word = GoogleTranslator(source=self.source_code, target='en').translate(self.text)
                 is_noun = False
@@ -75,7 +93,7 @@ class TranslationWorker(QThread):
                     translated_with_article = GoogleTranslator(source='en', target=self.target_code).translate(en_phrase)
                     final_output += f"\n\n[With Article: {translated_with_article}]"
             
-            # Send the result back to the UI
+            # --- 4. SEND RESULT BACK TO UI ---
             self.finished.emit(self.text, final_output)
             
         except Exception as e:
@@ -172,30 +190,9 @@ class LanguageLearnerUI(QMainWindow):
                 self.pdf_export_path = default_dir
                 QMessageBox.warning(self, "Default Path Set", f"No path selected. PDFs will default to:\n{default_dir}")
 
-    def check_for_updates(self):
-        """Pings the GitHub API to see if a newer version exists."""
-        try:
-            url = "https://api.github.com/repos/vasif-asadov1/language-learner/releases/latest"
-            response = requests.get(url, timeout=3)
-            response.raise_for_status()
-            
-            latest_version = response.json().get("tag_name")
-            release_url = response.json().get("html_url")
-            
-            if latest_version and latest_version != self.current_version:
-                msg = QMessageBox(self)
-                msg.setWindowTitle("Update Available!")
-                msg.setText(f"Great news! A new version ({latest_version}) is available.\nYou are currently running {self.current_version}.")
-                msg.setInformativeText("Would you like to download the new version now?")
-                msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                
-                if msg.exec() == QMessageBox.StandardButton.Yes:
-                    webbrowser.open(release_url) # Opens their default browser to your download page
-            else:
-                QMessageBox.information(self, "Up to Date", f"You are running the latest version! ({self.current_version})")
-                
-        except Exception as e:
-            QMessageBox.warning(self, "Update Check Failed", "Could not connect to GitHub to check for updates. Check your internet connection.")
+    def open_github(self):
+        """Opens the user's default web browser directly to the project repository."""
+        webbrowser.open("https://github.com/vasif-asadov1/language-learner")
 
     def open_layout_dialog(self):
         dialog = QDialog(self)
@@ -328,12 +325,16 @@ class LanguageLearnerUI(QMainWindow):
         
         top_bar.addSpacing(20)
         
-        # --- UPDATE BUTTON ---
-        self.btn_update = QPushButton("🔄 Check Update")
-        self.btn_update.setObjectName("btn_update") # <--- ADD THIS LINE
-        self.btn_update.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_update.clicked.connect(self.check_for_updates)
-        top_bar.addWidget(self.btn_update)
+        # --- GITHUB BUTTON ---
+        self.btn_github = QPushButton("🌐 GitHub")
+        self.btn_github.setObjectName("btn_github")
+        self.btn_github.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        # Professional Tooltip
+        self.btn_github.setToolTip("Visit the official GitHub repository to view the source code and download the latest releases.")
+        
+        self.btn_github.clicked.connect(self.open_github)
+        top_bar.addWidget(self.btn_github)
         
         self.btn_theme = QPushButton("🌙 Dark Mode")
         self.btn_theme.setObjectName("btn_theme")   # <--- ADD THIS LINE
@@ -350,14 +351,19 @@ class LanguageLearnerUI(QMainWindow):
         self.input_text.setFont(QFont("Arial", 14))
         self.input_text.setPlaceholderText("Type your sentence here...\n(Press 'Shift + Enter' or click 'ENTER' to translate)")
         self.input_text.installEventFilter(self)
+        self.input_text.document().setDefaultStyleSheet("")
+        
         
         self.output_text = QTextEdit()
         self.output_text.setFont(QFont("Arial", 14))
         self.output_text.setReadOnly(True)
+        self.output_text.document().setDefaultStyleSheet("")
         
         text_layout.addWidget(self.input_text)
         text_layout.addWidget(self.output_text)
         main_layout.addLayout(text_layout)
+
+        self.input_text.currentCharFormatChanged.connect(self._enforce_input_color)
         
         action_bar = QWidget()
         action_bar.setObjectName("actionBar")
@@ -446,6 +452,17 @@ class LanguageLearnerUI(QMainWindow):
         self.input_text.setFont(new_font)
         self.output_text.setFont(new_font)
 
+    def _enforce_input_color(self, fmt):
+        """Prevents PyQt6 from inheriting old HTML span colors on new keystrokes."""
+        target_color = QColor("#CBD5E1") if self.is_dark_mode else QColor("#2B2A28")
+        if fmt.foreground().color() != target_color:
+            correct_fmt = QTextCharFormat()
+            correct_fmt.setForeground(target_color)
+            # Block signal to avoid infinite loop
+            self.input_text.blockSignals(True)
+            self.input_text.mergeCurrentCharFormat(correct_fmt)
+            self.input_text.blockSignals(False)
+
     def apply_theme(self):
         """
         Applies a premium, modern UI theme (Tailwind CSS color palette).
@@ -455,7 +472,37 @@ class LanguageLearnerUI(QMainWindow):
         
         # ---------------------------------------------------------
         # SHARED STYLES: Custom sleek scrollbars for both themes
-        # ---------------------------------------------------------
+            # ---------------------------------------------------------
+        dark = self.is_dark_mode
+        input_color  = "#CBD5E1" if dark else "#2B2A28"   # soft blue-white
+        output_color = "#67E8F9" if dark else "#2B2A28"   # calm cyan
+
+        # Nuclear option: grab plain text, wipe document, rewrite with correct color
+        input_plain  = self.input_text.toPlainText()
+        output_plain = self.output_text.toPlainText()
+
+        self.input_text.clear()
+        self.output_text.clear()
+
+        # Set the default char format BEFORE inserting text
+        input_fmt = QTextCharFormat()
+        input_fmt.setForeground(QColor(input_color))
+        self.input_text.setCurrentCharFormat(input_fmt)
+
+        output_fmt = QTextCharFormat()
+        output_fmt.setForeground(QColor(output_color))
+        self.output_text.setCurrentCharFormat(output_fmt)
+
+        # Now insert — text will have the correct color baked in
+        self.input_text.setPlainText(input_plain)
+        self.output_text.setPlainText(output_plain)
+
+        # Re-apply format after setPlainText (it resets cursor format)
+        self.input_text.setCurrentCharFormat(input_fmt)
+        self.output_text.setCurrentCharFormat(output_fmt)
+
+
+
         scrollbar_style = """
             QScrollBar:vertical {
                 border: none;
@@ -479,6 +526,21 @@ class LanguageLearnerUI(QMainWindow):
         """
 
         if self.is_dark_mode:
+            
+            # fmt = QTextCharFormat()
+            # fmt.setForeground(QColor("#D0DEDC"))
+
+            # cursor = self.input_text.textCursor()
+            # cursor.select(cursor.SelectionType.Document)
+            # cursor.mergeCharFormat(fmt)
+
+            # self.input_text.mergeCurrentCharFormat(fmt)
+
+            # self.input_text.setTextColor(QColor("#D0DEDC"))
+            # self.output_text.setTextColor(QColor("#D9E6FF"))
+
+
+
             self.btn_theme.setText("☀️ Light Mode")
             self.setStyleSheet(scrollbar_style + """
                 /* MAIN WINDOW & TEXT AREAS */
@@ -488,9 +550,20 @@ class LanguageLearnerUI(QMainWindow):
                     font-family: 'Inter', 'Segoe UI', sans-serif;
                 }
 
+                /* --- NEW PREMIUM TOOLTIP --- */
+                QToolTip {
+                    background-color: #1E293B;
+                    color: #F8FAFC;
+                    border: 1px solid #475569;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    font-family: 'Inter', 'Segoe UI', sans-serif;
+                    font-size: 13px;
+                }
+
                 QTextEdit {
                     background-color: #16284A;
-                    color: #D9E6FF;
+                    color: #00F8D9;
                     border: 1px solid #2E4772;
                     border-radius: 22px;
                     padding: 24px;
@@ -526,12 +599,14 @@ class LanguageLearnerUI(QMainWindow):
                 }
                                
                 /* SECONDARY BUTTONS (Top Bar) */
-                QPushButton#btn_theme, QPushButton#btn_update { 
+                               
+
+                QPushButton#btn_theme, QPushButton#btn_github { 
                     background-color: #334155; 
                     color: #F8FAFC;
                     border: 1px solid #475569;
                 }
-                QPushButton#btn_theme:hover, QPushButton#btn_update:hover { 
+                QPushButton#btn_theme:hover, QPushButton#btn_github:hover { 
                     background-color: #475569; 
                 }
                 
@@ -669,6 +744,22 @@ class LanguageLearnerUI(QMainWindow):
             """)
 
         else:
+
+            
+ 
+            # fmt = QTextCharFormat()
+            # fmt.setForeground(QColor("#2B2A28"))
+
+            # cursor = self.input_text.textCursor()
+            # cursor.select(cursor.SelectionType.Document)
+            # cursor.mergeCharFormat(fmt)
+
+            # self.input_text.mergeCurrentCharFormat(fmt)
+
+            # self.input_text.setTextColor(QColor("#2B2A28"))
+            # self.output_text.setTextColor(QColor("#2B2A28"))
+
+
             self.btn_theme.setText("🌙 Dark Mode")
             self.setStyleSheet(scrollbar_style + """
                 /* MAIN WINDOW & TEXT AREAS */
@@ -677,6 +768,18 @@ class LanguageLearnerUI(QMainWindow):
                     color: #0F172A; 
                     font-family: 'Inter', 'Segoe UI', sans-serif;
                 }
+                
+                /* --- NEW PREMIUM TOOLTIP --- */
+                QToolTip {
+                    background-color: #FFFFFF;
+                    color: #334155;
+                    border: 1px solid #CBD5E1;
+                    border-radius: 6px;
+                    padding: 8px 12px;
+                    font-family: 'Inter', 'Segoe UI', sans-serif;
+                    font-size: 13px;
+                }
+                               
                                                             
                 QTextEdit {
                     background-color: #FEFDFC;
@@ -729,12 +832,13 @@ class LanguageLearnerUI(QMainWindow):
                 }
 
                 /* SECONDARY BUTTONS (Top Bar) */
-                QPushButton#btn_theme, QPushButton#btn_update { 
+                               
+                QPushButton#btn_theme, QPushButton#btn_github { 
                     background-color: #FFFFFF; 
                     color: #334155;
                     border: 1px solid #CBD5E1;
                 }
-                QPushButton#btn_theme:hover, QPushButton#btn_update:hover { 
+                QPushButton#btn_theme:hover, QPushButton#btn_github:hover { 
                     background-color: #F1F5F9; 
                 }
                 
@@ -860,6 +964,7 @@ class LanguageLearnerUI(QMainWindow):
             """)
 
 
+
     def translate_text(self):
         text = self.input_text.toPlainText().strip()
         if not text:
@@ -884,8 +989,20 @@ class LanguageLearnerUI(QMainWindow):
         self.worker.start()
 
     # --- NEW THREAD HANDLERS ---
+    # def on_translation_finished(self, original_text, final_output):
+    #     self.output_text.setText(final_output)
+    #     database.save_translation(self.db_name, original_text, final_output)
+    #     self.input_text.setEnabled(True)
+    #     self.input_text.setFocus()
+
     def on_translation_finished(self, original_text, final_output):
-        self.output_text.setText(final_output)
+        self.output_text.setPlainText(final_output)
+        
+        # Re-apply current theme color so new text isn't colorless
+        dark = self.is_dark_mode
+        self.output_text.setTextColor(QColor("#67E8F9" if dark else "#2B2A28"))
+        self.input_text.setTextColor(QColor("#CBD5E1" if dark else "#2B2A28"))
+        
         database.save_translation(self.db_name, original_text, final_output)
         self.input_text.setEnabled(True)
         self.input_text.setFocus()
