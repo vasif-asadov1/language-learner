@@ -92,7 +92,7 @@ If you wish to run the Python script locally or compile it yourself:
 ```bash
     git clone [https://github.com/vasif-asadov1/language-learner.git](https://github.com/vasif-asadov1/language-learner.git)
     cd language-learner
-    ```
+```
 
 2. Create a virtual environment and install dependencies:
 ```bash
@@ -105,12 +105,12 @@ If you wish to run the Python script locally or compile it yourself:
 3. Run the application:
 ```bash
     python main.py
-    ```
+```
 
 4. Compile the standalone executable:
 ```bash
     pyinstaller --onefile --windowed --name "LanguageLearner" main.py
-    ```
+```
 
 # 🔒 License & Copyright
 
