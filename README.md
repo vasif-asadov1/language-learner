@@ -91,13 +91,10 @@ Total control over your data. Click the PATH button to choose exactly which fold
 ### PDF Layout Options
 Customize how your study notes look. Choose between a standard stacked 1-Column layout, or a side-by-side 2-Column layout that places your original text cleanly next to the translation. Once configured, hit the PDF button to instantly generate your document!
 
-![Layout Options](images/program_layout_options.png)
+| 1-Column Layout Output | 2-Column Layout Output |
+| :---: | :---: |
+| ![1 Column](images/1_column_layout_pdf.png) | ![2 Column](images/2_column_layout_pdf.png) |
 
-*1-Column Layout Output:*
-![1 Column](images/1_column_layout_pdf.png)
-
-*2-Column Layout Output:*
-![2 Column](images/2_column_layout_pdf.png)
 
 ### Pronunciation of Non-Latin Alphabets
 Learning a language with a new alphabet can be intimidating. When translating into Russian, Arabic, or Persian, a "Show Pronunciation" checkbox dynamically appears. When checked, the app provides precise phonetic transliteration in English characters to help beginners speak immediately.
