@@ -3,7 +3,7 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'v*' # This tells GitHub to ONLY run the build when you publish a new version (like v1.0.0)
+      - 'v*'
 
 jobs:
   build:
@@ -12,12 +12,14 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: ubuntu-22.04 # Uses an older Linux base for maximum glibc compatibility
+          - os: ubuntu-22.04
             executable_name: LanguageLearner-Linux
-            artifact_path: dist/LanguageLearner
-          - os: windows-latest # Automatically builds the Windows version
+            # PyInstaller on Linux produces a file named exactly after the --name flag
+            artifact_name: LanguageLearner
+          - os: windows-latest
             executable_name: LanguageLearner-Windows.exe
-            artifact_path: dist/LanguageLearner.exe
+            # PyInstaller on Windows appends .exe automatically
+            artifact_name: LanguageLearner.exe
 
     steps:
     - name: Checkout Code
@@ -31,18 +33,15 @@ jobs:
     - name: Install Dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pyinstaller PyQt6 deep-translator requests fpdf2 arabic-reshaper python-bidi
+        pip install pyinstaller PyQt6 deep-translator requests fpdf2 arabic-reshaper python-bidi gTTS pygame
 
-    - name: Build Application with PyInstaller
+    - name: Build Application
       run: pyinstaller --onefile --windowed --icon="images/icon.ico" --hidden-import="bidi.algorithm" --name "LanguageLearner" main.py
 
-    - name: Rename Linux Binary
-      if: matrix.os == 'ubuntu-22.04'
-      run: mv ${{ matrix.artifact_path }} dist/${{ matrix.executable_name }}
-
-    - name: Rename Windows Binary
-      if: matrix.os == 'windows-latest'
-      run: Rename-Item -Path "${{ matrix.artifact_path }}" -NewName "${{ matrix.executable_name }}"
+    - name: Rename Artifacts
+      shell: bash
+      run: |
+        mv "dist/${{ matrix.artifact_name }}" "dist/${{ matrix.executable_name }}"
 
     - name: Publish to GitHub Releases
       uses: softprops/action-gh-release@v2

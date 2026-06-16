@@ -11,7 +11,7 @@ from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QPushButton, QComboBox, QCheckBox,
                              QLabel, QMessageBox, QFileDialog, QDialog, QRadioButton, QListView, QScrollArea)
-from PyQt6.QtCore import Qt, QEvent, QThread, pyqtSignal
+from PyQt6.QtCore import Qt, QEvent, QThread, pyqtSignal, QTimer
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QIcon, QColor, QTextCharFormat
 from deep_translator import GoogleTranslator
 import database
@@ -326,8 +326,9 @@ class LanguageLearnerUI(QMainWindow):
         top_bar.addSpacing(20)
         
         # --- GITHUB BUTTON ---
-        self.btn_github = QPushButton("🌐 GitHub")
+        self.btn_github = QPushButton(" GitHub")
         self.btn_github.setObjectName("btn_github")
+        self.btn_github.setIcon(QIcon("images/github.svg"))
         self.btn_github.setCursor(Qt.CursorShape.PointingHandCursor)
         
         # Professional Tooltip
@@ -358,6 +359,20 @@ class LanguageLearnerUI(QMainWindow):
         self.output_text.setFont(QFont("Arial", 14))
         self.output_text.setReadOnly(True)
         self.output_text.document().setDefaultStyleSheet("")
+        self.output_text.installEventFilter(self)
+
+        # --- NEW: FLOATING COPY BUTTONS ---
+        self.btn_copy_in = QPushButton("📋", self.input_text)
+        self.btn_copy_in.setObjectName("copyBtn")
+        self.btn_copy_in.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_copy_in.setToolTip("Copy Original Text")
+        self.btn_copy_in.clicked.connect(lambda: self.copy_to_clipboard(self.input_text, self.btn_copy_in))
+
+        self.btn_copy_out = QPushButton("📋", self.output_text)
+        self.btn_copy_out.setObjectName("copyBtn")
+        self.btn_copy_out.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_copy_out.setToolTip("Copy Translated Text")
+        self.btn_copy_out.clicked.connect(lambda: self.copy_to_clipboard(self.output_text, self.btn_copy_out))
         
         text_layout.addWidget(self.input_text)
         text_layout.addWidget(self.output_text)
@@ -582,6 +597,18 @@ class LanguageLearnerUI(QMainWindow):
                     border-radius: 22px;
                     padding: 24px;
                     line-height: 1.8;
+                }
+                                                  
+                QPushButton#copyBtn {
+                    background-color: transparent;
+                    border: none;
+                    font-size: 18px;
+                    padding: 4px;
+                    min-height: 0px;
+                }
+                QPushButton#copyBtn:hover {
+                    background-color: #2E4772;
+                    border-radius: 8px;
                 }
 
                 QTextEdit:focus {
@@ -856,6 +883,18 @@ class LanguageLearnerUI(QMainWindow):
                 QPushButton#btn_theme:hover, QPushButton#btn_github:hover { 
                     background-color: #F1F5F9; 
                 }
+                                                  
+                QPushButton#copyBtn {
+                    background-color: transparent;
+                    border: none;
+                    font-size: 18px;
+                    padding: 4px;
+                    min-height: 0px;
+                }
+                QPushButton#copyBtn:hover {
+                    background-color: #E4DFD4;
+                    border-radius: 8px;
+                }
                 
                 /* COMBO BOX */
                 QComboBox {
@@ -1112,6 +1151,20 @@ class LanguageLearnerUI(QMainWindow):
         """Clears the right-side translation area visually without affecting the database."""
         self.output_text.clear()
 
+    def copy_to_clipboard(self, text_box, button):
+        """Copies text to the clipboard and gives instant visual feedback."""
+        text = text_box.toPlainText()
+        if not text:
+            return
+            
+        QApplication.clipboard().setText(text)
+        
+        # Change icon to checkmark
+        button.setText("✅")
+        
+        # Create a timer to change it back to the clipboard icon after 1.5 seconds
+        QTimer.singleShot(1500, lambda: button.setText("📋"))
+
     def generate_pdf(self):
         try:
             export_time = datetime.now().strftime("%Y_%m_%d_%H_%M")
@@ -1131,8 +1184,8 @@ class LanguageLearnerUI(QMainWindow):
 
     def show_help_dialog(self):
         dialog = QDialog(self)
-        dialog.setWindowTitle("Language Learner Pro - User Guide")
-        dialog.resize(600, 500) 
+        dialog.setWindowTitle("Language Learner - User Guide")
+        dialog.resize(620, 550) 
         
         # Determine background color based on theme
         bg_color = "#071224" if self.is_dark_mode else "#F5F3EE"
@@ -1157,39 +1210,41 @@ class LanguageLearnerUI(QMainWindow):
         
         # --- THE MASTER INSTRUCTIONS LIST ---
         instructions = """
-        <h2 style='margin-bottom: 5px; font-size: 22px;'>🚀 Welcome to Language Learner Pro</h2>
-        <p style='font-size: 14px;'>Your premium tool for seamless language translation, precise pronunciation, and elegant document generation.</p>
+        <h2 style='margin-bottom: 5px; font-size: 22px;'>🚀 Welcome to Language Learner</h2>
+        <p style='font-size: 14px;'>Language Learner is a simple, distraction-free tool to translate text, listen to pronunciations, and automatically save your study notes into beautiful PDFs.</p>
         
-        <hr style='border: 1px solid #475569; margin: 15px 0;'>
+        <hr style='border: 1px solid #64748B; margin: 15px 0;'>
 
-        <h3 style='font-size: 16px;'>📝 Core Features</h3>
-        <ul style='font-size: 14px; margin-left: -20px;'>
-            <li style='margin-bottom: 8px;'><b>Translation:</b> Type your sentence and press <b>ENTER</b>.</li>
-            <li style='margin-bottom: 8px;'><b>Auto Detect:</b> Set 'Original Language' to Auto Detect to automatically identify the source text.</li>
-            <li style='margin-bottom: 8px;'><b>Synonyms:</b> Enter a <i>single word</i> and click <b>SYNONYMS</b> to fetch top matching vocabulary.</li>
-            <li style='margin-bottom: 8px;'><b>Pronunciation:</b> Select Russian, Arabic, or Persian to reveal the <b>Show Pronunciation</b> toggle for phonetic transliteration.</li>
-            <li style='margin-bottom: 8px;'><b>Audio Playback:</b> Click <b>🔊 PLAY</b> to hear a native text-to-speech voice read your translation aloud.</li>
-            <li style='margin-bottom: 8px;'><b>German Articles:</b> Translating a single noun into German automatically fetches its specific article (der/die/das).</li>
+        <h3 style='font-size: 16px;'>✨ Core Features</h3>
+        <ul style='font-size: 14px; margin-left: -20px; line-height: 1.6;'>
+            <li style='margin-bottom: 6px;'><b>Translation:</b> Type your word or sentence and click <b>ENTER</b>.</li>
+            <li style='margin-bottom: 6px;'><b>Auto Detect:</b> Not sure what language you are reading? Choose 'Auto Detect' and let the app figure it out.</li>
+            <li style='margin-bottom: 6px;'><b>Synonyms:</b> Type a single word and click <b>SYNONYMS</b> to see similar words and expand your vocabulary.</li>
+            <li style='margin-bottom: 6px;'><b>Pronunciation:</b> Translating to Russian, Arabic, or Persian? Check <b>Show Pronunciation</b> to see how to read the alphabet in English letters.</li>
+            <li style='margin-bottom: 6px;'><b>Audio Playback:</b> Click <b>🔊 PLAY</b> to hear a native voice read your translation out loud.</li>
+            <li style='margin-bottom: 6px;'><b>German Articles:</b> Translate a single English noun to German, and the app will automatically find the correct "der, die, or das" for you.</li>
+            <li style='margin-bottom: 6px;'><b>Font Adjustments:</b> Use the 'Font' dropdown at the top to make the text bigger or smaller for easy reading.</li>
         </ul>
 
-        <h3 style='font-size: 16px; margin-top: 15px;'>📄 PDF Exporting</h3>
-        <ul style='font-size: 14px; margin-left: -20px;'>
-            <li style='margin-bottom: 8px;'><b>PATH:</b> Choose the directory where your exported documents are saved.</li>
-            <li style='margin-bottom: 8px;'><b>LAYOUT:</b> Toggle between a stacked 1-Column format or a 2-Column (Side-by-Side) format.</li>
-            <li style='margin-bottom: 8px;'><b>PDF:</b> Generates a formatted document of your current session with automatic Right-To-Left (RTL) script embedding.</li>
+        <h3 style='font-size: 16px; margin-top: 15px;'>📄 PDF Exporting & History</h3>
+        <p style='font-size: 14px; margin-bottom: 10px;'>Everything you translate is temporarily saved in your current session so you can export it as a study guide.</p>
+        <ul style='font-size: 14px; margin-left: -20px; line-height: 1.6;'>
+            <li style='margin-bottom: 6px;'><b>PATH:</b> Choose the exact folder on your computer where your PDFs will be saved.</li>
+            <li style='margin-bottom: 6px;'><b>LAYOUT:</b> Choose how your PDF looks: a stacked 1-Column format, or a side-by-side view.</li>
+            <li style='margin-bottom: 6px;'><b>PDF:</b> Click this to instantly create and save a beautiful document of everything you learned today.</li>
+            <li style='margin-bottom: 6px;'><b>DELETE LAST:</b> Made a mistake? Click this to remove your very last translation from the PDF memory.</li>
+            <li style='margin-bottom: 6px;'><b>CLEAR HISTORY:</b> Click this to completely wipe the current memory and start a fresh study session.</li>
         </ul>
 
         <h3 style='font-size: 16px; margin-top: 15px;'>⌨️ Keyboard Shortcuts</h3>
-        <ul style='font-size: 14px; margin-left: -20px;'>
-            <li style='margin-bottom: 8px;'><b>Shift + Enter:</b> Instantly translate text while typing.</li>
-            <li style='margin-bottom: 8px;'><b>Ctrl + Shift + E:</b> Instantly export the session to PDF.</li>
+        <ul style='font-size: 14px; margin-left: -20px; line-height: 1.6;'>
+            <li style='margin-bottom: 8px;'><b>Shift + Enter</b> &nbsp;&mdash;&nbsp; Translate Text</li>
+            <li style='margin-bottom: 8px;'><b>Ctrl + Delete</b> &nbsp;&mdash;&nbsp; Clear Canvas</li>
+            <li style='margin-bottom: 8px;'><b>Ctrl + Shift + E</b> &nbsp;&mdash;&nbsp; Export to PDF</li>
         </ul>
 
-        <h3 style='font-size: 16px; margin-top: 15px;'>🧹 Session Management</h3>
-        <ul style='font-size: 14px; margin-left: -20px;'>
-            <li style='margin-bottom: 8px;'><b>DELETE LAST:</b> Removes the single most recent query from your database.</li>
-            <li style='margin-bottom: 8px;'><b>CLEAR HISTORY:</b> Permanently wipes the current session data.</li>
-        </ul>
+        <h3 style='font-size: 16px; margin-top: 15px;'>🌐 Support the Project</h3>
+        <p style='font-size: 14px;'>If you enjoy using Language Learner, click the <b>GitHub</b> button at the top to visit the official repository. You can check for new releases, view the source code, and leave a ⭐ star to support the project!</p>
         """
         
         # Apply theme-specific text colors
@@ -1221,10 +1276,19 @@ class LanguageLearnerUI(QMainWindow):
 
 
     def eventFilter(self, source, event):
+        # 1. Keep the buttons glued to the top-right corners when the window resizes
+        if event.type() == QEvent.Type.Resize:
+            if source is self.input_text:
+                self.btn_copy_in.move(self.input_text.width() - 45, 15)
+            elif source is self.output_text:
+                self.btn_copy_out.move(self.output_text.width() - 45, 15)
+
+        # 2. Keep your existing Shift+Enter translation logic
         if source is self.input_text and event.type() == QEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
                 self.translate_text()
                 return True 
+                
         return super().eventFilter(source, event)
 
     def closeEvent(self, event):
