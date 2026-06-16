@@ -207,8 +207,8 @@ class LanguageLearnerUI(QMainWindow):
         lbl = QLabel("Choose your PDF export format:")
         layout.addWidget(lbl)
         
-        radio_1 = QRadioButton("1 Column (Stacked)")
-        radio_2 = QRadioButton("2 Columns (Left: Original | Right: Translation)")
+        radio_1 = QRadioButton("1 Column Layout")
+        radio_2 = QRadioButton("2 Columns Layout")
         
         if self.pdf_layout == "2_column":
             radio_2.setChecked(True)
