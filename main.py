@@ -3,10 +3,13 @@ import os
 import json
 import requests
 import webbrowser
+from gtts import gTTS
+import pygame
+import tempfile
 from datetime import datetime
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QTextEdit, QPushButton, QComboBox, QCheckBox,
-                             QLabel, QMessageBox, QFileDialog, QDialog, QRadioButton, QListView)
+                             QLabel, QMessageBox, QFileDialog, QDialog, QRadioButton, QListView, QScrollArea)
 from PyQt6.QtCore import Qt, QEvent, QThread, pyqtSignal
 from PyQt6.QtGui import QFont, QShortcut, QKeySequence, QIcon
 from deep_translator import GoogleTranslator
@@ -78,10 +81,49 @@ class TranslationWorker(QThread):
         except Exception as e:
             self.error.emit(str(e))
 
+
+# --- BACKGROUND AUDIO WORKER ---
+class AudioWorker(QThread):
+    error = pyqtSignal(str)
+
+    def __init__(self, text, lang_code):
+        super().__init__()
+        self.text = text
+        self.lang_code = lang_code
+
+    def run(self):
+        try:
+            # 1. Generate the audio file from Google
+            tts = gTTS(text=self.text, lang=self.lang_code)
+            
+            # 2. Save it to a temporary folder
+            temp_dir = tempfile.gettempdir()
+            audio_path = os.path.join(temp_dir, "llp_audio.mp3")
+            tts.save(audio_path)
+
+            # 3. Play the audio using the pre-initialized mixer
+            pygame.mixer.music.load(audio_path)
+            pygame.mixer.music.play()
+            
+            # 4. Keep thread alive while playing
+            while pygame.mixer.music.get_busy():
+                pygame.time.Clock().tick(10)
+            
+            
+        except Exception as e:
+            self.error.emit(str(e))
+
+
+
 class LanguageLearnerUI(QMainWindow):
     def __init__(self):
         super().__init__()
         
+        # --- INITIALIZE AUDIO ENGINE ONCE ---
+        pygame.mixer.init()
+        
+        # --- APP VERSION ---
+        self.current_version = "v1.1.3"
         # --- APP VERSION ---
         self.current_version = "v1.1.3" 
         
@@ -264,7 +306,7 @@ class LanguageLearnerUI(QMainWindow):
         # --- DYNAMIC PRONUNCIATION SWITCH ---
         self.translit_checkbox = QCheckBox("Show Pronunciation")
         self.translit_checkbox.setCursor(Qt.CursorShape.PointingHandCursor)
-        top_bar.addWidget(self.translit_checkbox)
+        # top_bar.addWidget(self.translit_checkbox)
         
         # Connect the language dropdown to our new visibility function
         self.target_lang_combo.currentTextChanged.connect(self.update_translit_visibility)
@@ -348,6 +390,16 @@ class LanguageLearnerUI(QMainWindow):
         btn_layout = QPushButton("LAYOUT")
         btn_layout.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_layout.clicked.connect(self.open_layout_dialog)
+
+        # --- NEW HELP BUTTON ---
+        btn_help = QPushButton("HELP")
+        btn_help.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_help.clicked.connect(self.show_help_dialog)
+
+        btn_play = QPushButton("🔊 PLAY")
+        btn_play.setObjectName("playButton")
+        btn_play.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_play.clicked.connect(self.play_audio)
         
         btn_pdf = QPushButton("PDF")
         btn_pdf.setObjectName("pdfButton")
@@ -360,7 +412,10 @@ class LanguageLearnerUI(QMainWindow):
         button_layout.addWidget(btn_delete_last)
         button_layout.addWidget(btn_path)
         button_layout.addWidget(btn_layout)
+        button_layout.addWidget(btn_help)
         button_layout.addStretch()
+        button_layout.addWidget(self.translit_checkbox)
+        button_layout.addWidget(btn_play)
         button_layout.addWidget(btn_pdf)
         
         main_layout.addWidget(action_bar)
@@ -394,7 +449,8 @@ class LanguageLearnerUI(QMainWindow):
     def apply_theme(self):
         """
         Applies a premium, modern UI theme (Tailwind CSS color palette).
-        Explicitly targets QListView to bypass KDE Plasma's native window manager overrides.
+        Explicitly targets exact geometries to ensure pixel-perfect symmetry 
+        between light and dark modes.
         """
         
         # ---------------------------------------------------------
@@ -433,59 +489,42 @@ class LanguageLearnerUI(QMainWindow):
                 }
 
                 QTextEdit {
-
                     background-color: #16284A;
-
                     color: #D9E6FF;
-
                     border: 1px solid #2E4772;
-
                     border-radius: 22px;
-
                     padding: 24px;
-
                     line-height: 1.8;
                 }
 
                 QTextEdit:focus {
-
                     border: 2px solid #6C72E8;
                 }                              
 
-
-                               
                 QTextEdit[placeholderText] {
                     color: #A7A093;
                 }
 
-                /* PRIMARY BUTTONS (Gradients) */
-                                            
+                /* PRIMARY BUTTONS */
                 QPushButton {
-
                     background-color: #424DA8;
-
                     color: #EAF0FF;
-
                     border: none;
-
                     border-radius: 10px;
-
-                    padding: 8px 14px;
-
-                    font-weight: 600;
+                    padding: 10px 16px;
+                    font-weight: bold;
+                    font-size: 13px;
+                    min-height: 22px;
                 }
 
                 QPushButton:hover {
-
                     background-color: #4D59BB;
                 }
 
                 QPushButton:pressed {
-
                     background-color: #37418F;
                 }
                                
-                
                 /* SECONDARY BUTTONS (Top Bar) */
                 QPushButton#btn_theme, QPushButton#btn_update { 
                     background-color: #334155; 
@@ -496,34 +535,39 @@ class LanguageLearnerUI(QMainWindow):
                     background-color: #475569; 
                 }
                 
-                /* COMBO BOX (Dropdown Button) */
+                /* COMBO BOX */
                 QComboBox { 
                     background-color: #1E293B; 
                     color: #F8FAFC; 
                     border: 1px solid #475569; 
-                    border-radius: 8px; 
-                    padding: 8px 12px; 
+                    border-radius: 10px;
+                    padding: 10px 14px;
                     font-weight: bold;
+                    min-height: 22px;
+                }
+                QComboBox:hover {
+                    background-color: #27344A;
                 }
                 QComboBox::drop-down { 
                     border: none; 
+                    width: 26px;
                 }
                 
-                /* COMBO BOX POPUP LIST (QListView Override for KDE) */
-                QComboBox QListView {
+                /* COMBO BOX POPUP LIST */
+                QAbstractItemView {
                     background-color: #1E293B;
                     color: #F8FAFC;
                     border: 1px solid #475569;
-                    border-radius: 6px;
-                    outline: none; /* Removes dotted focus line */
-                    padding: 4px;
+                    border-radius: 10px;
+                    outline: none; 
+                    padding: 8px;
                 }
-                QComboBox QListView::item {
-                    min-height: 32px;
-                    padding: 4px 8px;
-                    border-radius: 4px; /* Rounds the hover highlight */
+                QAbstractItemView::item {
+                    min-height: 38px;
+                    padding: 6px 10px;
+                    border-radius: 8px; 
                 }
-                QComboBox QListView::item:selected, QComboBox QListView::item:hover {
+                QAbstractItemView::item:selected, QAbstractItemView::item:hover {
                     background-color: #6366F1;
                     color: #FFFFFF;
                 }
@@ -550,95 +594,78 @@ class LanguageLearnerUI(QMainWindow):
                 }
 
                 QLabel {
-
                     font-weight: 600;
-
                     color: #B7C3D9;
-
                     background-color: #13213C;
-
                     border-radius: 8px;
-
                     padding: 6px 10px;
                 }                              
 
-
-
-
-
-                                            
                 QWidget#topBarCard {
-
                     background-color: #0F1C34;
-
                     border: 1px solid #233654;
-
                     border-radius: 18px;
                 }
 
                 QWidget#actionBar {
-
                     background-color: #0F1C34;
-
                     border: 1px solid #233654;
-
                     border-radius: 18px;
                 }
 
-
                 QCheckBox {
-
                     background-color: #1D2B48;
-
                     border: 1px solid #304464;
-
-                    border-radius: 12px;
-
+                    border-radius: 10px;
                     padding: 10px 14px;
-
                     color: #F8FAFC;
-
                     font-weight: 600;
-
                     spacing: 8px;
                 }
 
                 QCheckBox::indicator {
-
                     width: 18px;
                     height: 18px;
-
                     border-radius: 5px;
-
                     border: 1px solid #4A5D84;
-
                     background-color: #16243F;
                 }
 
                 QCheckBox::indicator:checked {
-
                     background-color: #5B5CE2;
-
                     border: 1px solid #5B5CE2;
                 }   
 
+                /* ACTION BUTTONS (PDF & PLAY) */
                 QPushButton#pdfButton {
-
                     background-color: #1D6A52;
-
                     color: #E8FFF6;
-
                     border: none;
-
                     border-radius: 10px;
-
-                    padding: 8px 18px;
+                    padding: 10px 20px;
+                    min-width: 90px;
+                }
+                QPushButton#pdfButton:hover {
+                    background-color: #248164;
+                }
+                QPushButton#pdfButton:pressed {
+                    background-color: #15503E;
                 }
 
-
-
-
-
+                QPushButton#playButton {
+                    background-color: #2D3748; 
+                    color: #A0AEC0; 
+                    border: none;
+                    border-radius: 10px;
+                    padding: 10px 20px;
+                    min-width: 90px; 
+                }
+                QPushButton#playButton:hover { 
+                    background-color: #4A5568; 
+                }
+                QPushButton#playButton:pressed { 
+                    background-color: #1A202C; 
+                }
             """)
 
         else:
@@ -652,102 +679,55 @@ class LanguageLearnerUI(QMainWindow):
                 }
                                                             
                 QTextEdit {
-
                     background-color: #FEFDFC;
-
                     color: #2B2A28;
-
                     border: 1px solid #E4DFD4;
-
                     border-radius: 22px;
-
                     padding: 24px;
-
                     line-height: 1.8;
                 }
 
                 QTextEdit:focus {
-
                     border: 2px solid #8E97D6;
                 }
                                             
                 QWidget#topBarCard {
-
                     background-color: #FBF9F4;
-
                     border: 1px solid #DCD7CA;
-
                     border-radius: 18px;
                 }
 
                 QWidget#actionBar {
                     background-color: #F8F5EE;
-
                     border: 1px solid #D8D2C6;
-
                     border-radius: 18px;
                 }
                                
                 QComboBox#fontSelector {
-
                     background-color: #F5F4EF;
-
                     border: 1px solid #D9D4C8;
                 }
 
-                /* PRIMARY BUTTONS (Gradients) */
+                /* PRIMARY BUTTONS */
                 QPushButton {
-
                     background-color: #737DB9;
-
                     color: white;
-
                     border: none;
-
-                    border-radius: 12px;
-
+                    border-radius: 10px;
                     padding: 10px 16px;
-
                     font-weight: bold;
-
                     font-size: 13px;
-
                     min-height: 22px;
                 }
 
                 QPushButton:hover {
-
                     background-color: #6772B0;
                 }
 
                 QPushButton:pressed {
-
                     background-color: #5A66A6;
                 }
 
-                QPushButton#pdfButton {
-
-                    background-color: #BFD8C4;
-
-                    color: #234234;
-
-                    font-weight: bold;
-
-                    border-radius: 10px;
-
-                    padding: 11px 24px;
-                }
-
-                QPushButton#pdfButton:hover {
-
-                    background-color: #AED0B5;
-                }
-
-                QPushButton#pdfButton:pressed {
-
-                    background-color: #98C5A1;
-                }
-                
                 /* SECONDARY BUTTONS (Top Bar) */
                 QPushButton#btn_theme, QPushButton#btn_update { 
                     background-color: #FFFFFF; 
@@ -758,100 +738,63 @@ class LanguageLearnerUI(QMainWindow):
                     background-color: #F1F5F9; 
                 }
                 
-                /* COMBO BOX (Dropdown Button) */
-
+                /* COMBO BOX */
                 QComboBox {
-
                     background-color: #E9EEE4;
-
                     color: #2F2A24;
-
                     border: 1px solid #CBD3C1;
-
-                    border-radius: 12px;
-
+                    border-radius: 10px;
                     padding: 10px 14px;
-
                     font-weight: bold;
-
                     min-height: 22px;
                 }
-
                 QComboBox:hover {
-
                     background-color: #EEF2EA;
                 }
-
                 QComboBox::drop-down {
-
                     border: none;
-
                     width: 26px;
                 }
  
-
+                /* COMBO BOX POPUP LIST */
                 QAbstractItemView {
-
                     background-color: #F8F5EE;
-
                     color: #2F2A24;
-
                     border: 1px solid #D7D1C5;
-
-                    border-radius: 12px;
-
+                    border-radius: 10px;
                     outline: none;
-
                     padding: 8px;
                 }
-                                            
                 QAbstractItemView::item {
-
                     min-height: 38px;
-
                     padding: 6px 10px;
-
                     border-radius: 8px;
                 }
-
-                QAbstractItemView::item:selected {
-
+                QAbstractItemView::item:selected, QAbstractItemView::item:hover {
                     background-color: #7E88C7;
-
                     color: white;
                 }
 
                 QCheckBox {
-
-                    color: #2F2A24;
-
-                    font-weight: 600;
-
                     background-color: #F3F0E8;
-
-                    border-radius: 8px;
-
-                    padding: 6px 12px;
-
+                    border: 1px solid #D8D2C6; /* Added subtle border to match dark mode symmetry */
+                    border-radius: 10px;
+                    padding: 10px 14px;
+                    color: #2F2A24;
+                    font-weight: 600;
                     spacing: 8px;
                 }
 
                 QCheckBox::indicator {
-
                     width: 18px;
                     height: 18px;
-
                     border-radius: 5px;
-
                     border: 1px solid #CFC8BB;
-
                     background-color: #FFFFFF;
                 }
 
                 QCheckBox::indicator:checked {
-
                     background-color: #737DB9;
-
                     border: 1px solid #737DB9;
                 }
                                
@@ -877,16 +820,42 @@ class LanguageLearnerUI(QMainWindow):
                 }
 
                 QLabel {
-
                     font-weight: 600;
-
                     color: #665D52;
-
                     background-color: #F3F0E8;
-
                     border-radius: 8px;
-
                     padding: 6px 10px;
+                }
+                               
+                /* ACTION BUTTONS (PDF & PLAY) */
+                QPushButton#pdfButton {
+                    background-color: #BFD8C4;
+                    color: #234234;
+                    border: none;
+                    border-radius: 10px;
+                    padding: 10px 20px;
+                    min-width: 90px;
+                }
+                QPushButton#pdfButton:hover {
+                    background-color: #AED0B5;
+                }
+                QPushButton#pdfButton:pressed {
+                    background-color: #98C5A1;
+                }
+
+                QPushButton#playButton {
+                    background-color: #E2E2D9; 
+                    color: #6B6A63; 
+                    border: none;
+                    border-radius: 10px;
+                    padding: 10px 20px; 
+                    min-width: 90px; 
+                }
+                QPushButton#playButton:hover { 
+                    background-color: #D6D6CC; 
+                }
+                QPushButton#playButton:pressed { 
+                    background-color: #C2C2B8; 
                 }
             """)
 
@@ -926,6 +895,29 @@ class LanguageLearnerUI(QMainWindow):
         self.output_text.setText("")
         self.input_text.setEnabled(True)
         self.input_text.setFocus()
+
+    def play_audio(self):
+        # Grab the raw text from the output box
+        raw_text = self.output_text.toPlainText().strip()
+        
+        if not raw_text or "Translating in background" in raw_text or "No synonyms" in raw_text:
+            return
+
+        # CLEAN THE TEXT: Ignore [Pronunciation: ...] and [With Article: ...]
+        clean_text = raw_text.split("\n\n[")[0].strip()
+        
+        # If the user used the Synonyms tool, the text is formatted with bullet points.
+        # We just read the whole thing.
+        if "Synonyms in" in clean_text:
+            clean_text = clean_text.replace("Original Word:", "").replace("Synonyms in", "Synonyms")
+
+        target_lang_name = self.target_lang_combo.currentText()
+        target_code = self.lang_map[target_lang_name]
+
+        # Fire off the audio thread!
+        self.audio_worker = AudioWorker(clean_text, target_code)
+        self.audio_worker.error.connect(lambda err: QMessageBox.warning(self, "Audio Error", f"Could not play audio:\n{err}"))
+        self.audio_worker.start()
 
 
     def get_synonyms(self):
@@ -1001,6 +993,97 @@ class LanguageLearnerUI(QMainWindow):
         except Exception as e:
             QMessageBox.critical(self, "PDF Export Error", f"Failed to generate PDF.\n{str(e)}")
 
+    def show_help_dialog(self):
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Language Learner Pro - User Guide")
+        dialog.resize(600, 500) 
+        
+        # Determine background color based on theme
+        bg_color = "#071224" if self.is_dark_mode else "#F5F3EE"
+        dialog.setStyleSheet(f"background-color: {bg_color};")
+
+        main_layout = QVBoxLayout(dialog)
+        main_layout.setContentsMargins(0, 0, 0, 0) 
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setStyleSheet("border: none; background: transparent;")
+
+        content_widget = QWidget()
+        content_widget.setStyleSheet("background: transparent;")
+        content_layout = QVBoxLayout(content_widget)
+        content_layout.setContentsMargins(30, 30, 30, 30)
+        content_layout.setSpacing(20)
+
+        help_text = QLabel()
+        help_text.setWordWrap(True)
+        help_text.setTextFormat(Qt.TextFormat.RichText)
+        
+        # --- THE MASTER INSTRUCTIONS LIST ---
+        instructions = """
+        <h2 style='margin-bottom: 5px; font-size: 22px;'>🚀 Welcome to Language Learner Pro</h2>
+        <p style='font-size: 14px;'>Your premium tool for seamless language translation, precise pronunciation, and elegant document generation.</p>
+        
+        <hr style='border: 1px solid #475569; margin: 15px 0;'>
+
+        <h3 style='font-size: 16px;'>📝 Core Features</h3>
+        <ul style='font-size: 14px; margin-left: -20px;'>
+            <li style='margin-bottom: 8px;'><b>Translation:</b> Type your sentence and press <b>ENTER</b>.</li>
+            <li style='margin-bottom: 8px;'><b>Auto Detect:</b> Set 'Original Language' to Auto Detect to automatically identify the source text.</li>
+            <li style='margin-bottom: 8px;'><b>Synonyms:</b> Enter a <i>single word</i> and click <b>SYNONYMS</b> to fetch top matching vocabulary.</li>
+            <li style='margin-bottom: 8px;'><b>Pronunciation:</b> Select Russian, Arabic, or Persian to reveal the <b>Show Pronunciation</b> toggle for phonetic transliteration.</li>
+            <li style='margin-bottom: 8px;'><b>Audio Playback:</b> Click <b>🔊 PLAY</b> to hear a native text-to-speech voice read your translation aloud.</li>
+            <li style='margin-bottom: 8px;'><b>German Articles:</b> Translating a single noun into German automatically fetches its specific article (der/die/das).</li>
+        </ul>
+
+        <h3 style='font-size: 16px; margin-top: 15px;'>📄 PDF Exporting</h3>
+        <ul style='font-size: 14px; margin-left: -20px;'>
+            <li style='margin-bottom: 8px;'><b>PATH:</b> Choose the directory where your exported documents are saved.</li>
+            <li style='margin-bottom: 8px;'><b>LAYOUT:</b> Toggle between a stacked 1-Column format or a 2-Column (Side-by-Side) format.</li>
+            <li style='margin-bottom: 8px;'><b>PDF:</b> Generates a formatted document of your current session with automatic Right-To-Left (RTL) script embedding.</li>
+        </ul>
+
+        <h3 style='font-size: 16px; margin-top: 15px;'>⌨️ Keyboard Shortcuts</h3>
+        <ul style='font-size: 14px; margin-left: -20px;'>
+            <li style='margin-bottom: 8px;'><b>Shift + Enter:</b> Instantly translate text while typing.</li>
+            <li style='margin-bottom: 8px;'><b>Ctrl + Shift + E:</b> Instantly export the session to PDF.</li>
+        </ul>
+
+        <h3 style='font-size: 16px; margin-top: 15px;'>🧹 Session Management</h3>
+        <ul style='font-size: 14px; margin-left: -20px;'>
+            <li style='margin-bottom: 8px;'><b>DELETE LAST:</b> Removes the single most recent query from your database.</li>
+            <li style='margin-bottom: 8px;'><b>CLEAR HISTORY:</b> Permanently wipes the current session data.</li>
+        </ul>
+        """
+        
+        # Apply theme-specific text colors
+        if self.is_dark_mode:
+            help_text.setStyleSheet("color: #D9E6FF; line-height: 1.6;")
+        else:
+            help_text.setStyleSheet("color: #2B2A28; line-height: 1.6;")
+
+        help_text.setText(instructions)
+        content_layout.addWidget(help_text)
+        content_layout.addStretch()
+        
+        scroll.setWidget(content_widget)
+        main_layout.addWidget(scroll)
+
+        # Bottom Close Button
+        btn_close = QPushButton("Got it, let's learn!")
+        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_close.clicked.connect(dialog.accept)
+        
+        if self.is_dark_mode:
+            btn_close.setStyleSheet("background-color: #424DA8; color: #FFFFFF; border: none; border-radius: 8px; padding: 12px; margin: 10px 30px 20px 30px; font-weight: bold; font-size: 14px;")
+        else:
+            btn_close.setStyleSheet("background-color: #737DB9; color: #FFFFFF; border: none; border-radius: 8px; padding: 12px; margin: 10px 30px 20px 30px; font-weight: bold; font-size: 14px;")
+            
+        main_layout.addWidget(btn_close)
+
+        dialog.exec()
+
+
     def eventFilter(self, source, event):
         if source is self.input_text and event.type() == QEvent.Type.KeyPress:
             if event.key() == Qt.Key.Key_Return and event.modifiers() == Qt.KeyboardModifier.ShiftModifier:
@@ -1009,6 +1092,7 @@ class LanguageLearnerUI(QMainWindow):
         return super().eventFilter(source, event)
 
     def closeEvent(self, event):
+        pygame.mixer.quit()
         if os.path.exists(self.db_name):
             try:
                 os.remove(self.db_name)
