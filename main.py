@@ -375,6 +375,7 @@ class LanguageLearnerUI(QMainWindow):
         
         btn_enter = QPushButton("ENTER")
         btn_enter.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_enter.setToolTip("Shift+Enter")
         btn_enter.clicked.connect(self.translate_text)
 
         btn_synonyms = QPushButton("SYNONYMS")
@@ -388,6 +389,12 @@ class LanguageLearnerUI(QMainWindow):
         btn_delete_last = QPushButton("DELETE LAST")
         btn_delete_last.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_delete_last.clicked.connect(self.delete_last)
+
+        # --- NEW CLEAR OUTPUT BUTTON ---
+        btn_clear_output = QPushButton("CLEAR CANVAS")
+        btn_clear_output.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_clear_output.setToolTip("Ctrl+Delete")
+        btn_clear_output.clicked.connect(self.clear_output)
         
         btn_path = QPushButton("PATH")
         btn_path.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -410,12 +417,14 @@ class LanguageLearnerUI(QMainWindow):
         btn_pdf = QPushButton("PDF")
         btn_pdf.setObjectName("pdfButton")
         btn_pdf.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_pdf.setToolTip("Ctrl+Shift+E")
         btn_pdf.clicked.connect(self.generate_pdf)
         
         button_layout.addWidget(btn_enter)
         button_layout.addWidget(btn_synonyms)
         button_layout.addWidget(btn_clear)
         button_layout.addWidget(btn_delete_last)
+        button_layout.addWidget(btn_clear_output)
         button_layout.addWidget(btn_path)
         button_layout.addWidget(btn_layout)
         button_layout.addWidget(btn_help)
@@ -428,6 +437,10 @@ class LanguageLearnerUI(QMainWindow):
 
         self.shortcut_pdf = QShortcut(QKeySequence("Ctrl+Shift+E"), self)
         self.shortcut_pdf.activated.connect(self.generate_pdf)
+
+        # --- CLEAR CANVAS SHORTCUT ---
+        self.shortcut_clear = QShortcut(QKeySequence("Ctrl+Delete"), self)
+        self.shortcut_clear.activated.connect(self.clear_output)
 
     def toggle_theme(self):
         self.is_dark_mode = not self.is_dark_mode
@@ -542,7 +555,7 @@ class LanguageLearnerUI(QMainWindow):
 
 
             self.btn_theme.setText("☀️ Light Mode")
-            self.setStyleSheet(scrollbar_style + """
+            QApplication.instance().setStyleSheet(scrollbar_style + """
                 /* MAIN WINDOW & TEXT AREAS */
                 QMainWindow, QWidget { 
                     background-color: #071224;
@@ -553,12 +566,13 @@ class LanguageLearnerUI(QMainWindow):
                 /* --- NEW PREMIUM TOOLTIP --- */
                 QToolTip {
                     background-color: #1E293B;
-                    color: #F8FAFC;
-                    border: 1px solid #475569;
-                    border-radius: 6px;
-                    padding: 8px 12px;
+                    color: #94A3B8;
+                    border: 1px solid #334155;
+                    border-radius: 5px;
+                    padding: 4px 8px;
                     font-family: 'Inter', 'Segoe UI', sans-serif;
-                    font-size: 13px;
+                    font-size: 11px;
+                    font-weight: bold;
                 }
 
                 QTextEdit {
@@ -761,7 +775,7 @@ class LanguageLearnerUI(QMainWindow):
 
 
             self.btn_theme.setText("🌙 Dark Mode")
-            self.setStyleSheet(scrollbar_style + """
+            QApplication.instance().setStyleSheet(scrollbar_style + """
                 /* MAIN WINDOW & TEXT AREAS */
                 QMainWindow, QWidget { 
                     background-color: #F5F3EE;
@@ -769,15 +783,16 @@ class LanguageLearnerUI(QMainWindow):
                     font-family: 'Inter', 'Segoe UI', sans-serif;
                 }
                 
-                /* --- NEW PREMIUM TOOLTIP --- */
+                /* --- SLEEK COMPACT TOOLTIP (LIGHT) --- */
                 QToolTip {
                     background-color: #FFFFFF;
                     color: #334155;
                     border: 1px solid #CBD5E1;
-                    border-radius: 6px;
-                    padding: 8px 12px;
+                    border-radius: 5px;
+                    padding: 4px 8px;
                     font-family: 'Inter', 'Segoe UI', sans-serif;
-                    font-size: 13px;
+                    font-size: 11px;
+                    font-weight: bold;
                 }
                                
                                                             
@@ -1092,6 +1107,10 @@ class LanguageLearnerUI(QMainWindow):
     def delete_last(self):
         database.delete_last_entry(self.db_name)
         self.output_text.setText("Last entry deleted from database.")
+
+    def clear_output(self):
+        """Clears the right-side translation area visually without affecting the database."""
+        self.output_text.clear()
 
     def generate_pdf(self):
         try:
