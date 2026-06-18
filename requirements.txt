@@ -5,10 +5,12 @@ beautifulsoup4==4.15.0
 certifi==2026.5.20
 chardet==3.0.4
 charset-normalizer==3.4.7
+click==8.1.8
 deep-translator==1.11.4
 defusedxml==0.7.1
 fonttools==4.63.0
 fpdf2==2.8.7
+gTTS==2.5.4
 h11==0.9.0
 h2==3.2.0
 hpack==3.0.0
@@ -19,6 +21,7 @@ hyperframe==5.2.0
 idna==2.10
 packaging==26.2
 pillow==12.2.0
+pygame==2.6.1
 pyinstaller==6.21.0
 pyinstaller-hooks-contrib==2026.6
 PyQt6==6.11.0
